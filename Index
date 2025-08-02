@@ -1,0 +1,747 @@
+<!DOCTYPE html>
+
+<html>
+<head>
+    <title>Triplex Warehouse Bay Status</title>
+    <meta charset="UTF-8">
+    <link rel="icon" href="data:image/svg+xml,<svg xmlns='http://www.w3.org/2000/svg' viewBox='0 0 100 100'><text y='0.9em' font-size='90'>📦</text></svg>">
+    <script src="https://unpkg.com/react@18/umd/react.development.js"></script>
+    <script src="https://unpkg.com/react-dom@18/umd/react-dom.development.js"></script>
+    <script src="https://unpkg.com/@babel/standalone/babel.min.js"></script>
+    <script src="https://cdn.tailwindcss.com"></script>
+    <style>
+        @import url('https://fonts.googleapis.com/css2?family=Inter:wght@300;400;500;600;700;800;900&display=swap');
+
+```
+    * {
+        margin: 0;
+        padding: 0;
+        box-sizing: border-box;
+    }
+    
+    body { 
+        font-family: 'Inter', -apple-system, BlinkMacSystemFont, 'Segoe UI', Roboto, sans-serif;
+        background: #0a0a0a;
+        color: #ffffff;
+        overflow-x: hidden;
+        min-height: 100vh;
+    }
+    
+    /* Triplex-inspired dark theme */
+    .triplex-bg {
+        background: linear-gradient(180deg, #0a0a0a 0%, #1a1a1a 50%, #0f0f0f 100%);
+        position: relative;
+        min-height: 100vh;
+    }
+    
+    .triplex-bg::before {
+        content: '';
+        position: absolute;
+        inset: 0;
+        background-image: 
+            radial-gradient(circle at 20% 20%, rgba(59, 130, 246, 0.03) 0%, transparent 50%),
+            radial-gradient(circle at 80% 80%, rgba(168, 85, 247, 0.03) 0%, transparent 50%);
+        pointer-events: none;
+    }
+    
+    /* Glass effects */
+    .glass-dark {
+        background: rgba(255, 255, 255, 0.03);
+        backdrop-filter: blur(10px);
+        border: 1px solid rgba(255, 255, 255, 0.05);
+    }
+    
+    .glass-darker {
+        background: rgba(0, 0, 0, 0.4);
+        backdrop-filter: blur(10px);
+        border: 1px solid rgba(255, 255, 255, 0.05);
+    }
+    
+    /* Status colors */
+    .status-available {
+        background: linear-gradient(135deg, #10b981 0%, #059669 100%);
+    }
+    
+    .status-occupied {
+        background: linear-gradient(135deg, #3b82f6 0%, #2563eb 100%);
+    }
+    
+    .status-maintenance {
+        background: linear-gradient(135deg, #f59e0b 0%, #d97706 100%);
+    }
+    
+    /* Subtle glow effects */
+    .glow-available {
+        box-shadow: 0 0 15px rgba(16, 185, 129, 0.4);
+    }
+    
+    .glow-occupied {
+        box-shadow: 0 0 15px rgba(59, 130, 246, 0.4);
+    }
+    
+    .glow-maintenance {
+        box-shadow: 0 0 15px rgba(245, 158, 11, 0.4);
+    }
+    
+    /* Priority pulse */
+    @keyframes priority-pulse {
+        0%, 100% { 
+            box-shadow: 0 0 0 0 rgba(239, 68, 68, 0.7), 0 0 15px rgba(239, 68, 68, 0.4);
+        }
+        50% { 
+            box-shadow: 0 0 0 8px rgba(239, 68, 68, 0), 0 0 25px rgba(239, 68, 68, 0.6);
+        }
+    }
+    
+    .priority-high {
+        animation: priority-pulse 2s ease-in-out infinite;
+        border: 2px solid rgba(239, 68, 68, 0.6) !important;
+    }
+    
+    /* Bay card styling */
+    .bay-card {
+        transition: all 0.3s cubic-bezier(0.4, 0, 0.2, 1);
+        position: relative;
+        overflow: hidden;
+        height: 100%;
+    }
+    
+    .bay-card::before {
+        content: '';
+        position: absolute;
+        top: 0;
+        left: -100%;
+        width: 100%;
+        height: 100%;
+        background: linear-gradient(90deg, transparent, rgba(255, 255, 255, 0.05), transparent);
+        transition: left 0.5s;
+    }
+    
+    .bay-card:hover::before {
+        left: 100%;
+    }
+    
+    /* Section headers */
+    .section-header {
+        position: relative;
+        padding-left: 16px;
+    }
+    
+    .section-header::before {
+        content: '';
+        position: absolute;
+        left: 0;
+        top: 50%;
+        transform: translateY(-50%);
+        width: 4px;
+        height: 20px;
+        background: #3b82f6;
+        border-radius: 2px;
+    }
+    
+    /* Loading animation */
+    .loading-bar {
+        width: 200px;
+        height: 4px;
+        background: rgba(255, 255, 255, 0.1);
+        border-radius: 2px;
+        overflow: hidden;
+        position: relative;
+    }
+    
+    .loading-bar::after {
+        content: '';
+        position: absolute;
+        top: 0;
+        left: -50%;
+        width: 50%;
+        height: 100%;
+        background: linear-gradient(90deg, transparent, #3b82f6, transparent);
+        animation: loading 1.5s linear infinite;
+    }
+    
+    @keyframes loading {
+        to { left: 100%; }
+    }
+    
+    /* Portrait optimized layout */
+    .main-container {
+        display: flex;
+        flex-direction: column;
+        min-height: 100vh;
+        padding: 12px;
+    }
+    
+    .content-area {
+        flex: 1;
+        display: flex;
+        flex-direction: column;
+        gap: 16px;
+        margin-bottom: 16px;
+    }
+    
+    /* Bay grid for portrait */
+    .bay-grid-portrait {
+        display: grid;
+        grid-template-columns: repeat(2, 1fr);
+        gap: 12px;
+    }
+    
+    @media (max-width: 640px) {
+        .bay-grid-portrait {
+            grid-template-columns: 1fr;
+        }
+    }
+</style>
+```
+
+</head>
+<body class="triplex-bg">
+    <div id="root"></div>
+
+```
+<script type="text/babel">
+    const { useState, useEffect } = React;
+
+    const WarehouseDisplay = () => {
+        const [currentTime, setCurrentTime] = useState(new Date());
+        const [loading, setLoading] = useState(true);
+        const [error, setError] = useState(null);
+        const [bays, setBays] = useState([]);
+        const [lastUpdate, setLastUpdate] = useState(new Date());
+        const [connectionStatus, setConnectionStatus] = useState('connecting');
+
+        // Monday.com credentials
+        const MONDAY_API_TOKEN = 'eyJhbGciOiJIUzI1NiJ9.eyJ0aWQiOjE5NzM0NTU3LCJhYWkiOjExLCJ1aWQiOjU5MDg5ODMsImlhZCI6IjIwMTktMDgtMDlUMTE6NTY6MjIuMDAwWiIsInBlciI6Im1lOndyaXRlIiwiYWN0aWQiOjI2NzU1ODgsInJnbiI6InVzZTEifQ.pUxWcdbufrUZTehHqkm8N3RqWmTpTMwKK-SlCis_N_M';
+        const BOARD_ID = '9621818226';
+
+        // Map Monday.com data to bay format
+        const convertMondayData = (mondayData) => {
+            console.log('Converting Monday data...');
+            
+            // Initialize all 13 bays as available
+            const allBays = [];
+            
+            // Bays 1-3 in Unit 7
+            for (let i = 1; i <= 3; i++) {
+                allBays.push({
+                    id: `bay-${i}`,
+                    name: `Bay ${i}`,
+                    unit: 'Unit 7',
+                    status: 'available',
+                    job: null,
+                    dates: null,
+                    tech: null,
+                    accountManager: null,
+                    eta: null,
+                    priority: null,
+                    progress: 0
+                });
+            }
+            
+            // Bays 4-13 in Unit 7a
+            for (let i = 4; i <= 13; i++) {
+                allBays.push({
+                    id: `bay-${i}`,
+                    name: `Bay ${i}`,
+                    unit: 'Unit 7a',
+                    status: 'available',
+                    job: null,
+                    dates: null,
+                    tech: null,
+                    accountManager: null,
+                    eta: null,
+                    priority: null,
+                    progress: 0
+                });
+            }
+
+            // Check if we have data
+            if (!mondayData?.data?.boards?.[0]?.items_page?.items) {
+                console.log('No items found in Monday data');
+                return allBays;
+            }
+
+            const items = mondayData.data.boards[0].items_page.items;
+            console.log(`Processing ${items.length} items from Monday.com`);
+
+            // Get today's date for filtering
+            const today = new Date();
+            today.setHours(0, 0, 0, 0);
+            console.log(`Filtering for date: ${today.toLocaleDateString('en-GB')}`);
+
+            // Process each item
+            items.forEach((item, index) => {
+                try {
+                    console.log(`Processing item ${index + 1}: ${item.name}`);
+                    
+                    // Get column values
+                    const columnValues = {};
+                    item.column_values.forEach(col => {
+                        columnValues[col.id] = col.text || col.value || '';
+                    });
+
+                    // Extract data
+                    const jobName = item.name || '';
+                    const dateRangeText = columnValues['timerange_mkt9y6dz'] || '';
+                    const bayDropdown = columnValues['dropdown_mkt9x0kk'] || '';
+                    const projectManager = columnValues['multiple_person_mkt9pp7h'] || '';
+                    const accountManager = columnValues['lookup_mktdg8dv'] || '';
+                    const dispatchTime = columnValues['hour_mktd6xtj'] || '';
+
+                    console.log(`Date range: "${dateRangeText}"`);
+
+                    // Parse date range and check if it includes today
+                    let includeJob = false;
+                    let formattedDates = dateRangeText;
+
+                    if (dateRangeText) {
+                        try {
+                            // Parse Monday.com date format (could be various formats)
+                            // Expected formats: "2024-01-15 - 2024-01-18" or "15 Jan - 18 Jan" etc.
+                            const dateMatch = dateRangeText.match(/(\d{4}-\d{2}-\d{2})\s*-\s*(\d{4}-\d{2}-\d{2})/);
+                            if (dateMatch) {
+                                const startDate = new Date(dateMatch[1]);
+                                const endDate = new Date(dateMatch[2]);
+                                
+                                // Check if today is within range
+                                includeJob = today >= startDate && today <= endDate;
+                                
+                                // Format dates as DD-MM-YY
+                                const formatDate = (date) => {
+                                    const dd = String(date.getDate()).padStart(2, '0');
+                                    const mm = String(date.getMonth() + 1).padStart(2, '0');
+                                    const yy = String(date.getFullYear()).slice(-2);
+                                    return `${dd}-${mm}-${yy}`;
+                                };
+                                
+                                formattedDates = `${formatDate(startDate)} - ${formatDate(endDate)}`;
+                            } else {
+                                // If we can't parse the date, include the job (fail-safe)
+                                includeJob = true;
+                            }
+                        } catch (error) {
+                            console.error('Error parsing date:', error);
+                            includeJob = true; // Include if date parsing fails
+                        }
+                    } else {
+                        // No date range specified, include the job
+                        includeJob = true;
+                    }
+
+                    if (!includeJob) {
+                        console.log(`Job "${jobName}" not in today's date range, skipping`);
+                        return; // Skip this job
+                    }
+
+                    console.log(`Bay dropdown value: "${bayDropdown}"`);
+
+                    // Parse bay numbers - handle multiple formats
+                    const bayNumbers = [];
+                    
+                    // Handle single bay: "Bay - 01", "Bay - 02", etc.
+                    const singleBayMatch = bayDropdown.match(/Bay\s*-\s*(\d+)/i);
+                    if (singleBayMatch) {
+                        bayNumbers.push(parseInt(singleBayMatch[1], 10));
+                    }
+                    
+                    // Handle multiple bays: "Bay - 01, Bay - 02, Bay - 03" or "1,2,3" or "1-3"
+                    // First, try to find all numbers in the string
+                    const allNumbers = bayDropdown.match(/\d+/g);
+                    if (allNumbers && allNumbers.length > 1) {
+                        // Check if it's a range (e.g., "1-3" or "Bay - 01-03")
+                        const rangeMatch = bayDropdown.match(/(\d+)\s*[-–]\s*(\d+)/);
+                        if (rangeMatch) {
+                            const start = parseInt(rangeMatch[1], 10);
+                            const end = parseInt(rangeMatch[2], 10);
+                            for (let i = start; i <= end; i++) {
+                                if (i >= 1 && i <= 13 && !bayNumbers.includes(i)) {
+                                    bayNumbers.push(i);
+                                }
+                            }
+                        } else {
+                            // It's a list of numbers
+                            allNumbers.forEach(num => {
+                                const bayNum = parseInt(num, 10);
+                                if (bayNum >= 1 && bayNum <= 13 && !bayNumbers.includes(bayNum)) {
+                                    bayNumbers.push(bayNum);
+                                }
+                            });
+                        }
+                    }
+
+                    console.log(`Assigned to bays: ${bayNumbers.join(', ')}`);
+
+                    // Apply job data to all assigned bays
+                    bayNumbers.forEach(bayNum => {
+                        const bayIndex = bayNum - 1; // Array is 0-indexed
+                        if (bayIndex >= 0 && bayIndex < allBays.length) {
+                            allBays[bayIndex] = {
+                                ...allBays[bayIndex],
+                                status: 'occupied',
+                                job: jobName,
+                                dates: formattedDates,
+                                tech: projectManager,
+                                accountManager: accountManager,
+                                eta: dispatchTime,
+                                priority: null,
+                                progress: 0
+                            };
+                        }
+                    });
+
+                } catch (error) {
+                    console.error(`Error processing item ${index + 1}:`, error);
+                }
+            });
+
+            console.log('Conversion complete');
+            return allBays;
+        };
+
+        // Map status
+        const mapStatus = (status) => {
+            if (!status) return 'available';
+            status = status.toLowerCase();
+            if (status.includes('occupied') || status.includes('busy') || status.includes('in use')) return 'occupied';
+            if (status.includes('maintenance') || status.includes('repair') || status.includes('service')) return 'maintenance';
+            if (status.includes('available') || status.includes('free') || status.includes('empty')) return 'available';
+            return 'occupied'; // Default to occupied if status exists but doesn't match
+        };
+
+        // Map priority
+        const mapPriority = (priority) => {
+            if (!priority) return null;
+            priority = priority.toLowerCase();
+            if (priority.includes('high') || priority.includes('urgent') || priority.includes('critical')) return 'high';
+            if (priority.includes('medium') || priority.includes('normal')) return 'medium';
+            if (priority.includes('low')) return 'low';
+            return null;
+        };
+
+        // Fetch data from Monday.com
+        const fetchMondayData = async () => {
+            try {
+                setConnectionStatus('connecting');
+                setError(null);
+                console.log('Fetching data from Monday.com...');
+
+                const query = `
+                    query {
+                        boards(ids: [${BOARD_ID}]) {
+                            name
+                            items_page(limit: 50) {
+                                items {
+                                    name
+                                    column_values {
+                                        id
+                                        text
+                                        value
+                                        type
+                                    }
+                                }
+                            }
+                        }
+                    }
+                `;
+
+                const response = await fetch('https://api.monday.com/v2', {
+                    method: 'POST',
+                    headers: {
+                        'Content-Type': 'application/json',
+                        'Authorization': MONDAY_API_TOKEN
+                    },
+                    body: JSON.stringify({ query })
+                });
+
+                if (!response.ok) {
+                    throw new Error(`HTTP error! status: ${response.status}`);
+                }
+
+                const data = await response.json();
+                console.log('Monday.com response:', data);
+                
+                if (data.errors) {
+                    throw new Error(data.errors[0].message);
+                }
+
+                const convertedBays = convertMondayData(data);
+                console.log('Converted bays:', convertedBays);
+                setBays(convertedBays);
+                setLastUpdate(new Date());
+                setLoading(false);
+                setConnectionStatus('connected');
+
+            } catch (err) {
+                console.error('Error fetching data:', err);
+                setError(err.message);
+                setConnectionStatus('error');
+                
+                // Use mock data on error
+                console.log('Using mock data due to error');
+                const mockBays = generateMockBays();
+                setBays(mockBays);
+                setLoading(false);
+            }
+        };
+
+        // Generate mock data as fallback
+        const generateMockBays = () => {
+            const mockBays = [];
+            const mockJobs = ['Tour Setup - Coldplay', 'Arena Rig - Ed Sheeran', 'Festival Pack - Reading', 'Corporate Event - BMW', 'Studio Install - Abbey Road'];
+            const mockProjectManagers = ['John Smith', 'Sarah Johnson', 'Mike Wilson'];
+            const mockAccountManagers = ['Emma Davis', 'Paul Jones', 'Lisa Chen'];
+            const mockDispatchTimes = ['08:00', '09:30', '14:00', '15:30'];
+            
+            // Generate dates around today for testing
+            const today = new Date();
+            const formatDate = (date) => {
+                const dd = String(date.getDate()).padStart(2, '0');
+                const mm = String(date.getMonth() + 1).padStart(2, '0');
+                const yy = String(date.getFullYear()).slice(-2);
+                return `${dd}-${mm}-${yy}`;
+            };
+            
+            // All 13 bays
+            for (let i = 1; i <= 13; i++) {
+                const isOccupied = Math.random() > 0.3;
+                const unit = i <= 3 ? 'Unit 7' : 'Unit 7a';
+                
+                // Generate date range that might include today
+                let dates = null;
+                if (isOccupied) {
+                    const startOffset = Math.floor(Math.random() * 5) - 2; // -2 to +2 days from today
+                    const duration = Math.floor(Math.random() * 3) + 1; // 1-3 days duration
+                    const startDate = new Date(today);
+                    startDate.setDate(today.getDate() + startOffset);
+                    const endDate = new Date(startDate);
+                    endDate.setDate(startDate.getDate() + duration);
+                    dates = `${formatDate(startDate)} - ${formatDate(endDate)}`;
+                }
+                
+                mockBays.push({
+                    id: `bay-${i}`,
+                    name: `Bay ${i}`,
+                    unit: unit,
+                    status: isOccupied ? 'occupied' : 'available',
+                    job: isOccupied ? mockJobs[Math.floor(Math.random() * mockJobs.length)] : null,
+                    dates: dates,
+                    tech: isOccupied ? mockProjectManagers[Math.floor(Math.random() * mockProjectManagers.length)] : null,
+                    accountManager: isOccupied ? mockAccountManagers[Math.floor(Math.random() * mockAccountManagers.length)] : null,
+                    eta: isOccupied ? mockDispatchTimes[Math.floor(Math.random() * mockDispatchTimes.length)] : null,
+                    priority: isOccupied && Math.random() > 0.7 ? 'high' : null,
+                    progress: 0
+                });
+            }
+            
+            return mockBays;
+        };
+
+        useEffect(() => {
+            const timer = setInterval(() => {
+                setCurrentTime(new Date());
+            }, 1000);
+
+            fetchMondayData();
+            const dataTimer = setInterval(fetchMondayData, 30000); // Refresh every 30 seconds
+
+            return () => {
+                clearInterval(timer);
+                clearInterval(dataTimer);
+            };
+        }, []);
+
+        // Calculate statistics
+        const unit7Bays = bays.filter(bay => bay.unit === 'Unit 7');
+        const unit7aBays = bays.filter(bay => bay.unit === 'Unit 7a');
+        
+        const stats = {
+            total: bays.length,
+            available: bays.filter(b => b.status === 'available').length,
+            occupied: bays.filter(b => b.status === 'occupied').length,
+            maintenance: bays.filter(b => b.status === 'maintenance').length,
+            highPriority: bays.filter(b => b.priority === 'high').length
+        };
+
+        const BayCard = ({ bay }) => (
+            <div className={`bay-card glass-dark rounded-lg p-3 ${bay.priority === 'high' ? 'priority-high' : ''}`}>
+                <div className="flex items-center justify-between mb-2">
+                    <h4 className="text-base font-semibold text-white/90">{bay.name}</h4>
+                    <div className={`w-3 h-3 rounded-full ${
+                        bay.status === 'available' ? 'status-available glow-available' : 
+                        bay.status === 'occupied' ? 'status-occupied glow-occupied' : 
+                        'status-maintenance glow-maintenance'
+                    }`}></div>
+                </div>
+                
+                {bay.status === 'available' ? (
+                    <div className="text-center py-3">
+                        <div className="text-sm text-gray-400 uppercase tracking-wider">Available</div>
+                    </div>
+                ) : (
+                    <div className="space-y-2">
+                        {bay.job && (
+                            <div>
+                                <div className="text-xs text-gray-500 uppercase tracking-wider">Job</div>
+                                <div className="text-sm text-white/80 font-medium truncate">{bay.job}</div>
+                            </div>
+                        )}
+                        {bay.dates && (
+                            <div>
+                                <div className="text-xs text-gray-500 uppercase tracking-wider">Dates</div>
+                                <div className="text-sm text-white/70">{bay.dates}</div>
+                            </div>
+                        )}
+                        {bay.tech && (
+                            <div>
+                                <div className="text-xs text-gray-500 uppercase tracking-wider">Project Manager</div>
+                                <div className="text-sm text-white/70 truncate">{bay.tech}</div>
+                            </div>
+                        )}
+                        {bay.accountManager && (
+                            <div>
+                                <div className="text-xs text-gray-500 uppercase tracking-wider">Account Manager</div>
+                                <div className="text-sm text-white/70 truncate">{bay.accountManager}</div>
+                            </div>
+                        )}
+                        {bay.eta && (
+                            <div>
+                                <div className="text-xs text-gray-500 uppercase tracking-wider">Dispatch</div>
+                                <div className="text-sm text-white/90 font-mono">{bay.eta}</div>
+                            </div>
+                        )}
+                        {bay.progress > 0 && (
+                            <div className="pt-1">
+                                <div className="w-full h-1 bg-white/10 rounded-full overflow-hidden">
+                                    <div 
+                                        className="h-full bg-gradient-to-r from-blue-500 to-blue-400 transition-all duration-500"
+                                        style={{ width: `${bay.progress}%` }}
+                                    ></div>
+                                </div>
+                            </div>
+                        )}
+                    </div>
+                )}
+            </div>
+        );
+
+        return (
+            <div className="main-container">
+                {/* Loading overlay */}
+                {loading && (
+                    <div className="fixed inset-0 bg-black/80 backdrop-blur-sm flex items-center justify-center z-50">
+                        <div className="glass-darker rounded-lg p-8 text-center">
+                            <div className="text-xl font-medium mb-4">Connecting to Monday.com...</div>
+                            <div className="loading-bar mx-auto"></div>
+                        </div>
+                    </div>
+                )}
+
+                {/* Header */}
+                <header className="glass-darker rounded-lg p-4 mb-4">
+                    <div className="flex justify-between items-center">
+                        <div>
+                            <h1 className="text-2xl font-bold text-white">Warehouse Bay Status</h1>
+                            <div className="flex items-center gap-2 mt-1">
+                                <div className={`w-2 h-2 rounded-full ${
+                                    connectionStatus === 'connected' ? 'bg-green-500 animate-pulse' : 
+                                    connectionStatus === 'error' ? 'bg-red-500' : 
+                                    'bg-yellow-500 animate-pulse'
+                                }`}></div>
+                                <span className="text-xs text-gray-400">
+                                    {connectionStatus === 'connected' ? 'Live Data' : 
+                                     connectionStatus === 'error' ? 'Connection Error' : 
+                                     'Connecting...'}
+                                </span>
+                            </div>
+                        </div>
+                        
+                        <div className="text-right">
+                            <div className="text-3xl font-mono font-medium text-white">
+                                {currentTime.toLocaleTimeString([], {hour: '2-digit', minute:'2-digit'})}
+                            </div>
+                            <div className="text-xs text-gray-400">
+                                {currentTime.toLocaleDateString('en-GB', { 
+                                    weekday: 'short', 
+                                    day: 'numeric',
+                                    month: 'short'
+                                })}
+                            </div>
+                        </div>
+                    </div>
+                </header>
+
+                {/* Content area */}
+                <div className="content-area">
+                    {/* Unit 7 Section */}
+                    <div>
+                        <h2 className="section-header text-lg font-semibold text-white mb-3">
+                            Unit 7 <span className="text-sm font-normal text-gray-400">({unit7Bays.length} bays)</span>
+                        </h2>
+                        <div className="bay-grid-portrait">
+                            {unit7Bays.map(bay => (
+                                <BayCard key={bay.id} bay={bay} />
+                            ))}
+                        </div>
+                    </div>
+
+                    {/* Unit 7a Section */}
+                    <div>
+                        <h2 className="section-header text-lg font-semibold text-white mb-3">
+                            Unit 7a <span className="text-sm font-normal text-gray-400">({unit7aBays.length} bays)</span>
+                        </h2>
+                        <div className="bay-grid-portrait">
+                            {unit7aBays.map(bay => (
+                                <BayCard key={bay.id} bay={bay} />
+                            ))}
+                        </div>
+                    </div>
+                </div>
+
+                {/* Statistics Footer */}
+                <footer className="glass-darker rounded-lg p-4">
+                    <div className="grid grid-cols-5 gap-2 mb-3">
+                        <div className="text-center">
+                            <div className="text-2xl font-bold text-white">{stats.total}</div>
+                            <div className="text-xs text-gray-400 uppercase">Total</div>
+                        </div>
+                        <div className="text-center">
+                            <div className="text-2xl font-bold text-emerald-400">{stats.available}</div>
+                            <div className="text-xs text-gray-400 uppercase">Free</div>
+                        </div>
+                        <div className="text-center">
+                            <div className="text-2xl font-bold text-blue-400">{stats.occupied}</div>
+                            <div className="text-xs text-gray-400 uppercase">Busy</div>
+                        </div>
+                        <div className="text-center">
+                            <div className="text-2xl font-bold text-amber-400">{stats.maintenance}</div>
+                            <div className="text-xs text-gray-400 uppercase">Maint</div>
+                        </div>
+                        <div className="text-center">
+                            <div className="text-2xl font-bold text-red-400">{stats.highPriority}</div>
+                            <div className="text-xs text-gray-400 uppercase">High</div>
+                        </div>
+                    </div>
+                    
+                    <div className="flex items-center justify-between text-xs text-gray-500 pt-2 border-t border-white/5">
+                        <span>Last update: {lastUpdate.toLocaleTimeString()}</span>
+                        <button 
+                            onClick={fetchMondayData}
+                            className="text-white/50 hover:text-white transition-colors"
+                        >
+                            Refresh
+                        </button>
+                    </div>
+                </footer>
+            </div>
+        );
+    };
+
+    // Use React 18's createRoot API
+    const root = ReactDOM.createRoot(document.getElementById('root'));
+    root.render(<WarehouseDisplay />);
+</script>
+```
+
+</body>
+</html>
